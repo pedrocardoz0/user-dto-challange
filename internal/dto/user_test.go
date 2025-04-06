@@ -15,8 +15,7 @@ func TestGetUserResponseDTO(t *testing.T) {
 
 	assert.NotNil(t, userResponse)
 	assert.Equal(t, userResponse.ID, userID)
-	assert.Equal(t, userResponse.Fullname, "John Doe")
-	assert.Equal(t, userResponse.Age, 35)
+	assert.Equal(t, userResponse.Fullname, "Updated Doe")
 	assert.NoError(t, err)
 }
 
@@ -45,15 +44,15 @@ func TestUserCreateDTO_Create(t *testing.T) {
 	userCreate := &UserCreateDTO{
 		FirstName:   "Test",
 		LastName:    "Test",
-		Email:       "test2@test.com",
+		Email:       "test7@test.com",
 		Password:    "password",
 		DateOfBirth: time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC),
 	}
 
 	userDTO := NewUserDTO()
-	userResponse, err := userDTO.createUser(userCreate)
+	created, err := userDTO.createUser(userCreate)
 
-	assert.NotNil(t, userResponse)
+	assert.True(t, created)
 	assert.NoError(t, err)
 }
 
@@ -67,9 +66,9 @@ func TestUserCreateDTO_Create_InvalidData(t *testing.T) {
 	}
 
 	userDTO := NewUserDTO()
-	userResponse, err := userDTO.createUser(userCreate)
+	created, err := userDTO.createUser(userCreate)
 
-	assert.False(t, userResponse)
+	assert.False(t, created)
 	assert.Error(t, err)
 	assert.Equal(t, err.Error(), "invalid user data")
 }

@@ -1,9 +1,10 @@
 package dto
 
 import (
-	"database/sql"
 	"errors"
 	"time"
+
+	"user-dto-challange/internal/repository"
 
 	_ "github.com/lib/pq"
 )
@@ -31,6 +32,14 @@ type UserCreateDTO struct {
 	DateOfBirth time.Time `json:"date_of_birth"`
 }
 
+type UserUpdateDTO struct {
+	FirstName   string    `json:"first_name"`
+	LastName    string    `json:"last_name"`
+	Email       string    `json:"email"`
+	Password    string    `json:"password"`
+	DateOfBirth time.Time `json:"date_of_birth"`
+}
+
 func NewUserDTO() *UserDTO {
 	return &UserDTO{}
 }
@@ -40,32 +49,21 @@ func (u *UserDTO) findUserByID(userID string) (*UserResponseDTO, error) {
 		return nil, errors.New("userID is empty")
 	}
 
-	u.userResponse = &UserResponseDTO{}
-
-	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgre password=admin dbname=user sslmode=disable")
+	userRepository := repository.NewUserRepository()
+	user, err := userRepository.FindByID(userID)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	defer db.Close()
-
-	rows, err := db.Query("SELECT id, first_name, last_name, email, date_of_birth FROM users WHERE id = $1", userID)
-	if err != nil {
-		panic(err)
+	u.userResponse = &UserResponseDTO{
+		ID:          user.ID,
+		FirstName:   user.FirstName,
+		LastName:    user.LastName,
+		Email:       user.Email,
+		DateOfBirth: user.DateOfBirth,
+		Fullname:    user.FirstName + " " + user.LastName,
+		Age:         time.Now().Year() - user.DateOfBirth.Year(),
 	}
-
-	if !rows.Next() {
-		return nil, errors.New("user not found")
-	}
-
-	err = rows.Scan(&u.userResponse.ID, &u.userResponse.FirstName, &u.userResponse.LastName, &u.userResponse.Email, &u.userResponse.DateOfBirth)
-
-	if err != nil {
-		panic(err)
-	}
-
-	u.userResponse.Fullname = u.userResponse.FirstName + " " + u.userResponse.LastName
-	u.userResponse.Age = time.Now().Year() - u.userResponse.DateOfBirth.Year()
 
 	return u.userResponse, nil
 }
@@ -75,19 +73,17 @@ func (u *UserDTO) createUser(userCreate *UserCreateDTO) (bool, error) {
 		return false, errors.New("invalid user data")
 	}
 
-	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgre password=admin dbname=user sslmode=disable")
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
+	userRepository := repository.NewUserRepository()
+	_, err := userRepository.Create(&repository.UserCreate{
+		FirstName:   userCreate.FirstName,
+		LastName:    userCreate.LastName,
+		Email:       userCreate.Email,
+		Password:    userCreate.Password,
+		DateOfBirth: userCreate.DateOfBirth,
+	})
 
-	rows, err := db.Query("INSERT INTO users (first_name, last_name, email, password, date_of_birth) VALUES ($1, $2, $3, $4, $5) RETURNING id", userCreate.FirstName, userCreate.LastName, userCreate.Email, userCreate.Password, userCreate.DateOfBirth)
 	if err != nil {
-		panic(err)
-	}
-
-	if !rows.Next() {
-		return false, errors.New("failed to create user")
+		return false, err
 	}
 
 	return true, nil
